@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/net/proxy"
 	"golang.org/x/net/idna"
 )
 
@@ -302,14 +303,24 @@ func (c *Client) connect(res *Response, host string, parsedURL *url.URL, clientC
 	}
 
 	// Dialer timeout for handshake
-	conn, err := tls.DialWithDialer(&net.Dialer{Timeout: c.ConnectTimeout}, "tcp", host, conf)
-	res.conn = conn
+	dialer := proxy.FromEnvironmentUsing(&net.Dialer{Timeout: c.ConnectTimeout})
+	conn_notls, err := dialer.Dial("tcp", host)
 	if err != nil {
-		return conn, err
+		return conn_notls, err
 	}
+
+	// Construct a tls client from the underlying connection
+	conn := tls.Client(conn_notls, conf)
+	res.conn = conn
 
 	if c.ReadTimeout != 0 {
 		conn.SetDeadline(time.Now().Add(c.ReadTimeout))
+	}
+
+	// Initiate the tls handshake
+	err = conn.Handshake()
+	if err != nil {
+		return nil, err
 	}
 
 	cert := conn.ConnectionState().PeerCertificates[0]
