@@ -23,6 +23,7 @@ This fork of the library improves on the original in several ways, some listed a
 - Support proxies
 - Support client certs
 - Add connection/header timeouts, and read timeouts
+- Add proxy functionality
 - And more!
 
 ## Notes
